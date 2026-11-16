@@ -21,7 +21,7 @@ make shot DISK=disk.po KEYS='wait 400; type Hello; key RETURN'   # headless run,
 ```
 
 Linux needs these packages first (`setup-linux.sh` lists the missing ones and stops):
-`sudo apt install build-essential git cmake ninja-build python3 libsdl3-dev libboost-dev zlib1g-dev libgtk-4-dev libadwaita-1-dev gh unzip curl`
+`sudo apt install build-essential git cmake ninja-build python3 libsdl3-dev libboost-dev zlib1g-dev libgtk-4-dev libadwaita-1-dev libssl-dev unzip curl`
 
 On Linux the emulator is the GNOME frontend (`opt/fngo/fujinet-go-apple2-gnome`), on macOS the app.
 
