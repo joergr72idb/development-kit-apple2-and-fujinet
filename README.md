@@ -16,6 +16,7 @@ with FujiNet built in. Everything is built into `opt/` inside this folder.
 ```sh
 tools/setup-macos.sh                 # macOS: Homebrew packages + everything missing into opt/
 tools/setup-linux.sh                 # Linux (Debian/Ubuntu): checks the apt packages, then the same
+make                                 # the demo sample: build/demo.po (ProDOS boot disk)
 make run DISK=path/to/disk.po        # put the disk on the emulated FujiNet's SD card, start the emulator
 make shot DISK=disk.po KEYS='wait 400; type Hello; key RETURN'   # headless run, see below
 ```
@@ -62,7 +63,13 @@ after `FRAMES` frames (default 900 = 15 s at 60 Hz) writes
 
 - `build/shot.png` - the screen,
 - `build/shot.txt` - the 40-column text screen as plain text (page 1, $0400),
-- `build/shot.fujinet.log` - FujiNet's console output.
+- `build/shot.fujinet.log` - FujiNet's console output,
+- `build/shot.wav` - the sound of the whole run (speaker and Mockingboard, 44.1 kHz stereo; e.g.
+  `ffmpeg -i build/shot.wav -lavfi showspectrumpic=s=1200x500 spec.png` shows the notes).
+
+`PEEK=addr:len` (hex address) prints that memory at the end of the run, with `PEEK_EVERY=N` also
+every N frames while it runs - e.g. a program's frame counter or the state of its music player
+(`PEEK=5AFB:1 make shot ...`; the addresses are in the program's map file).
 
 Without `DISK` it stays in CONFIG. `KEYS`: commands separated by `;`, one after another from
 power-on - `wait N` (frames), `type TEXT` (arrives as written, upper and lower case), `key NAME [N]`
@@ -74,6 +81,35 @@ It is `tools/a2shot.c`, a small program on FujiNet Go's own session library (bui
 script in `build/fngo`; the a2shot binary is GPL-3 like it). It has its own settings and SD card in
 `build/shot-config` and `build/shot-data`, so `make run` keeps its CONFIG settings. The emulator's
 ports are fixed, so it refuses while `make run` is open.
+
+## The demo (`samples/demo.c`, `samples/demo_fx.s`)
+
+A small demoscene-style screen: a logo in a 3x5 block font with a rainbow running through it,
+raster bars, a scroller in the same font with a rainbow, a 4-line info panel, a 3-voice tune on
+the Mockingboard (melody, chord arpeggio, drums and bass sharing one voice) and the current
+temperature in Celle, which the Apple II fetches itself through FujiNet (N:HTTPS + JSON from
+open-meteo.com). It is the Apple II version of the Atari, C64 and CPC kits' demos, with the same
+tune. `make` builds `build/demo.po`; `make run DISK=build/demo.po`, then in CONFIG pick it from
+the SD card into slot 1 and boot (ESC). Or headless: `make shot DISK=build/demo.po FRAMES=1500`.
+
+![The demo in FujiNet Go Apple II: rainbow logo with the temperature, raster bars, scroller, info panel](docs/demo.png)
+
+How it works: the Apple II has no colour registers or raster interrupts, so the demo uses lo-res
+graphics (40 x 40 colour blocks) with 4 text lines below (mixed mode) and draws every frame again
+into the hidden page, which it shows at the next vertical blank (`$C019`). Per text row there are
+only 4 possible bytes (letter or background, top and bottom block); a mask per column picks one.
+The scroller rows are ring buffers, so a step costs a few bytes instead of a copy. Everything fits
+into one frame: 60 frames per second. The music is the AY player of the CPC demo in 6502 code; the
+Mockingboard in slot 4 gets the same registers on both chips.
+
+An AI assistant (Claude Code) generated the demo from this prompt, after it had made the Atari, C64
+and CPC demos; no code was written by hand. It checked the demo with `make shot`: screenshots, the
+frame counter read 100 frames apart (`PEEK`, added for this) and the music player's state traced
+every second (`PEEK_EVERY`), plus a spectrogram of the new `build/shot.wav`. It fixed what it found
+there: the first version ran at 30 frames per second (faster drawing loops, the ring buffers), and a
+register clobbered by a subroutine left the music player's start values random.
+
+> now build the same demo for the apple II toolchain
 
 ## Notes
 
